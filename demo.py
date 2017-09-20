@@ -22,6 +22,9 @@ sim_config = {
     'WebVis': {
         'cmd': 'mosaik-web -s 0.0.0.0:8000 %(addr)s',
     },
+    'Ethereum': {
+        'python': 'model.mosaik_ethereum:Ethereum'
+    },
 }
 
 START = '2014-01-01 00:00:00'
@@ -36,8 +39,8 @@ def main():
     random.seed(23)
     world = mosaik.World(sim_config)
     create_scenario(world)
-    world.run(until=END)  # As fast as possilbe
-    # world.run(until=END, rt_factor=1/60)  # Real-time 1min -> 1sec
+    # world.run(until=END)  # As fast as possilbe
+    world.run(until=END, rt_factor=1/(60 * 15))  # Real-time 15min -> 1sec
 
 
 def create_scenario(world):
@@ -45,6 +48,7 @@ def create_scenario(world):
     pypower = world.start('PyPower', step_size=15*60)
     hhsim = world.start('HouseholdSim')
     pvsim = world.start('CSV', sim_start=START, datafile=PV_DATA)
+    ethereum_sim = world.start('Ethereum', step_size=15*60)
 
     # Instantiate models
     grid = pypower.Grid(gridfile=GRID_FILE).children
@@ -52,6 +56,7 @@ def create_scenario(world):
                                     profile_file=PROFILE_FILE,
                                     grid_name=GRID_NAME).children
     pvs = pvsim.PV.create(20)
+    ethereum = ethereum_sim.Ethereum.create(1)
 
     # Connect entities
     connect_buildings_to_grid(world, houses, grid)
@@ -69,6 +74,9 @@ def create_scenario(world):
     branches = [e for e in grid if e.type in ('Transformer', 'Branch')]
     connect_many_to_one(world, branches, hdf5,
                         'P_from', 'Q_from', 'P_to', 'P_from')
+
+    # Ethereum "database"
+    world.connect(nodes[0], ethereum[0], 'P')
 
     # Web visualization
     webvis = world.start('WebVis', start_date=START, step_size=60)

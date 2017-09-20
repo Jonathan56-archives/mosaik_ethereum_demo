@@ -8,3 +8,5 @@ MANIFEST
 dist/*
 docs/_build/*
 htmlcov/*
+*.ipynb_checkpoints/
+*.hdf5
