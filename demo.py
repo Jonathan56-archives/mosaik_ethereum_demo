@@ -59,8 +59,7 @@ def create_scenario(world):
     ethereum = ethereum_sim.Ethereum.create(1)
 
     # Connect entities
-    connect_buildings_to_grid(world, houses, grid)
-    connect_randomly(world, pvs, [e for e in grid if 'node' in e.eid], 'P')
+    connect_buildings_to_grid(world, houses, pvs, grid)
 
     # Database
     db = world.start('DB', step_size=60, duration=END)
@@ -129,12 +128,19 @@ def create_scenario(world):
     })
 
 
-def connect_buildings_to_grid(world, houses, grid):
+def connect_buildings_to_grid(world, houses, pvs, grid):
+    # Get all bus with PQBus in a dictionnary {id: bus element}
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}
+
+    # Get the node id for each house
     house_data = world.get_data(houses, 'node_id')
-    for house in houses:
+
+    # Assign node and buildings (pv + house)
+    for index, house in enumerate(houses):
         node_id = house_data[house]['node_id']
+        if index < len(pvs):
+            world.connect(pvs[index], buses[node_id], 'P')
         world.connect(house, buses[node_id], ('P_out', 'P'))
 
 
