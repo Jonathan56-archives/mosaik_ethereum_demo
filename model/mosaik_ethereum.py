@@ -9,7 +9,7 @@ meta = {
             'public': True,
             'any_inputs': True,
             'params': [],
-            'attrs': ['P', 'Q'],
+            'attrs': ['load', 'gene'],
         },
     },
 }
@@ -53,16 +53,18 @@ class Ethereum(mosaik_api.Simulator):
         return entities
 
     def step(self, time, inputs=None):
-        # Calculate energy = power_for_timestep * 1 timestep / 1 hour [Wh] (15/60)
-        for eid, attrs in inputs.items():
-            for attr, nodes in attrs.items():
-                for node, value in nodes.items():
-                    set_value = value
+        # # Calculate energy = power_for_timestep * 1 timestep / 1 hour [Wh] (15/60)
+        # for eid, attrs in inputs.items():
+        #     for attr, nodes in attrs.items():
+        #         for node, value in nodes.items():
+        #             set_value = value
+        import pdb; pdb.set_trace()
 
-        # Interact with the blockchain network
-        trans_hash = self.contract.transact(
-            {'to': self.contract_addr, 'gas': 90000}).addConsumptionToken(
-            self.accounts[0], int(set_value))
+
+        # # Interact with the blockchain network
+        # trans_hash = self.contract.transact(
+        #     {'to': self.contract_addr, 'gas': 90000}).addConsumptionToken(
+        #     self.accounts[0], int(set_value))
         return time + self.step_size
 
     def get_data(self, outputs=None):
@@ -88,10 +90,6 @@ class Ethereum(mosaik_api.Simulator):
 
         # Create reference to the contract
         self.contract = web3.eth.contract(energy_abi, self.contract_addr)
-
-        # # Add a filter
-        # contract_filter = self.contract.on('addedRessource',
-        #     filter_params={'fromBlock': 'earliest'})
 
 
 def main():

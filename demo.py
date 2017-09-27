@@ -56,7 +56,7 @@ def create_scenario(world):
                                     profile_file=PROFILE_FILE,
                                     grid_name=GRID_NAME).children
     pvs = pvsim.PV.create(20)
-    ethereum = ethereum_sim.Ethereum.create(1)
+    ethereum = ethereum_sim.Ethereum.create(10)
 
     # Connect entities
     connect_buildings_to_grid(world, houses, pvs, grid)
@@ -73,9 +73,6 @@ def create_scenario(world):
     branches = [e for e in grid if e.type in ('Transformer', 'Branch')]
     connect_many_to_one(world, branches, hdf5,
                         'P_from', 'Q_from', 'P_to', 'P_from')
-
-    # Ethereum "database"
-    world.connect(nodes[0], ethereum[0], 'P')
 
     # Web visualization
     webvis = world.start('WebVis', start_date=START, step_size=60)
@@ -133,15 +130,25 @@ def connect_buildings_to_grid(world, houses, pvs, grid):
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}
 
-    # Get the node id for each house
+    # Get the house data
     house_data = world.get_data(houses, 'node_id')
 
     # Assign node and buildings (pv + house)
     for index, house in enumerate(houses):
+        # Get the node id
         node_id = house_data[house]['node_id']
+
+        # Assign a PV to the node
         if index < len(pvs):
             world.connect(pvs[index], buses[node_id], 'P')
+
+        # Assign a house load to the node
         world.connect(house, buses[node_id], ('P_out', 'P'))
+
+        # Connect Ethereum database to a node with PV and house load
+        if index < len(ethereum) and index < len(pvs):
+            world.connect(house, ethereum[index], ('P_out', 'load'))
+            world.connect(pvs[index], ethereum[index], ('P', 'gene'))
 
 
 if __name__ == '__main__':
