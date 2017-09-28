@@ -11,13 +11,16 @@ contract Energy {
   // Money balance
   mapping (address => uint) balance;
 
-  // Event added ressources
-  event addedRessource(address _target, uint _value);
+  // Event added consumption
+  event addedConsumption(address _target, uint _value);
+
+  // Event added generation
+  event addedGeneration(address _target, uint _value);
 
   // net meter update generation tokens
   function addGenerationToken(address receiver, uint amount) {
     genetoken[receiver] += amount;
-    addedRessource(receiver, amount);
+    addedGeneration(receiver, amount);
   }
 
   // get generation tokens
@@ -28,7 +31,7 @@ contract Energy {
   // net meter update consumption tokens
   function addConsumptionToken(address receiver, uint amount) {
     constoken[receiver] += amount;
-    addedRessource(receiver, amount);
+    addedConsumption(receiver, amount);
   }
 
   // get consumption tokens

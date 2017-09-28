@@ -58,13 +58,30 @@ class Ethereum(mosaik_api.Simulator):
         #     for attr, nodes in attrs.items():
         #         for node, value in nodes.items():
         #             set_value = value
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
 
-        # # Interact with the blockchain network
-        # trans_hash = self.contract.transact(
-        #     {'to': self.contract_addr, 'gas': 90000}).addConsumptionToken(
-        #     self.accounts[0], int(set_value))
+        # For all the participants on the blockchain
+        for eid, attrs in inputs.items():
+            # Pick account
+            account = self.accounts[int(eid.split('_')[1])]
+
+            # For all the attributes to post to the blockchain
+            for attr, attr_data in attrs.items():
+
+                # For all the sources of those attributes
+                for source, value in attr_data.items():
+                    if attr == 'load':
+                        trans_hash = self.contract.transact(
+                            {'to': self.contract_addr, 'gas': 90000}).addConsumptionToken(
+                            account, int(abs(value)))
+                    elif attr == 'gene':
+                        trans_hash = self.contract.transact(
+                            {'to': self.contract_addr, 'gas': 90000}).addGenerationToken(
+                            account, int(abs(value)))
+                    else:
+                        raise ValueError('Invalid attr: ' + str(attr))
+
         return time + self.step_size
 
     def get_data(self, outputs=None):

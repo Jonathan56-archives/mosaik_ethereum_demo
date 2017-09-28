@@ -39,8 +39,8 @@ def main():
     random.seed(23)
     world = mosaik.World(sim_config)
     create_scenario(world)
-    # world.run(until=END)  # As fast as possilbe
-    world.run(until=END, rt_factor=1/(60 * 15))  # Real-time 15min -> 1sec
+    world.run(until=END)  # As fast as possilbe
+    # world.run(until=END, rt_factor=1/(60 * 15))  # Real-time 15min -> 1sec
 
 
 def create_scenario(world):
@@ -59,7 +59,7 @@ def create_scenario(world):
     ethereum = ethereum_sim.Ethereum.create(10)
 
     # Connect entities
-    connect_buildings_to_grid(world, houses, pvs, grid)
+    connect_buildings_to_grid(world, houses, pvs, ethereum, grid)
 
     # Database
     db = world.start('DB', step_size=60, duration=END)
@@ -125,7 +125,7 @@ def create_scenario(world):
     })
 
 
-def connect_buildings_to_grid(world, houses, pvs, grid):
+def connect_buildings_to_grid(world, houses, pvs, ethereum, grid):
     # Get all bus with PQBus in a dictionnary {id: bus element}
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}
