@@ -10,3 +10,4 @@ docs/_build/*
 htmlcov/*
 *.ipynb_checkpoints/
 *.hdf5
+ethereum/build/contracts/*
