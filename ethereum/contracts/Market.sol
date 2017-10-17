@@ -50,6 +50,9 @@ contract Market {
   *********** */
 
   // NOT IMPLEMENTED YET
+  event energy_posted_event(address _target, uint _value);
+  event market_cleared_event(uint _sell, uint _buy, uint _prod, uint _gen);
+  event bill_sent_event(address _target, uint _value);
 
   /* **********
     Function
@@ -73,6 +76,7 @@ contract Market {
   function post_energy_balance(uint amount) {
     // Set participant last energy balance
     energy_balance[msg.sender] = amount;
+    energy_posted_event(msg.sender, amount);
 
     // Increase total production or consumption
     if (amount > 0)
@@ -128,15 +132,18 @@ contract Market {
       buying_price = minimum_local_buying_price;
     }
 
+    // Event marked cleared
+    market_cleared_event(selling_price, buying_price, total_consumption, total_production);
+
     // Reset total production and total consumption for this round
     total_consumption = 0;
     total_production = 0;
 
     // Send a bill to all the participants
-    bill_all_participants();
+    _bill_all_participants();
   }
 
-  function bill_all_participants() {
+  function _bill_all_participants() {
     // Loop over all the participants
     for (uint i = 0; i < participants.length; i++) {
 
@@ -144,9 +151,12 @@ contract Market {
       if (energy_balance[participants[i]] > 0) {
         // Participant consumed power (energy_balance is positive)
         bill[participants[i]] += buying_price * energy_balance[participants[i]];
+        bill_sent_event(participants[i], buying_price * energy_balance[participants[i]]);
+
       } else {
         // Participant produced energy (energy_balance is negative)
         bill[participants[i]] += selling_price * energy_balance[participants[i]];
+        bill_sent_event(participants[i], buying_price * energy_balance[participants[i]]);
       }
     }
   }
