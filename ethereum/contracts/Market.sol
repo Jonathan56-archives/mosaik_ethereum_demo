@@ -9,38 +9,38 @@ contract Market {
   mapping (address => int) energy_balance;
 
   // Total production [Wh]
-  uint total_production = 0;
+  int total_production = 0;
 
   // Total consumption [Wh]
-  uint total_consumption = 0;
+  int total_consumption = 0;
 
   // Total number of participants
-  uint public number_of_participant = 0;
+  int public number_of_participant = 0;
 
   // Number of participation during a round
-  uint number_of_participation = 0;
+  int number_of_participation = 0;
 
   // Retail price [$/Wh]
-  uint retail_price = 100;
+  int retail_price = 100;
 
   // Retail price upper limit [%]
-  uint upper_ratio = 166;
+  int upper_ratio = 166;
 
   // Retail price lower limit [%]
-  uint lower_ratio = 50;
+  int lower_ratio = 50;
 
   // Buying price [$/Wh]
-  uint buying_price = 0;
+  int buying_price = 0;
 
   // Selling price [$/Wh]
-  uint selling_price = 0;
+  int selling_price = 0;
 
   // Maximum / minimum local selling price
-  uint maximum_local_selling_price = (3 * retail_price) / 2;
-  uint minimum_local_selling_price = retail_price / 2;
+  int maximum_local_selling_price = (3 * retail_price) / 2;
+  int minimum_local_selling_price = retail_price / 2;
 
   // Minimum local buying price
-  uint minimum_local_buying_price = retail_price / 2;
+  int minimum_local_buying_price = retail_price / 2;
 
   // Bill per participant [$]
   mapping (address => int) bill;
@@ -51,7 +51,7 @@ contract Market {
 
   // NOT IMPLEMENTED YET
   event energy_posted_event(address _target, int _value);
-  event market_cleared_event(uint _sell, uint _buy, uint ratio, uint _prod, uint _gen);
+  event market_cleared_event(int _sell, int _buy, int ratio, int _prod, int _gen);
   event bill_sent_event(address _target, int _value);
 
   /* **********
@@ -85,11 +85,11 @@ contract Market {
     energy_posted_event(msg.sender, amount);
 
     // Increase total production or consumption
-    if (amount > 0)
+    if (amount < 0)
       // ratio need to be a positive number, so we ABS(amount)
-      total_production += uint(-1 * amount);
+      total_production += -1 * amount;
     else
-      total_consumption += uint(amount);
+      total_consumption += amount;
 
     // Increase number of participant for the market round
     number_of_participation += 1;
@@ -104,7 +104,7 @@ contract Market {
     number_of_participation = 0;
 
     // Calculate the ratio between production and consumption
-    uint ratio = total_consumption * 100 / total_production;
+    int ratio = total_consumption * 100 / total_production;
 
     // The network need more local production
     if (ratio >= upper_ratio) {
@@ -120,8 +120,8 @@ contract Market {
     // The price of buying local generation goes down to avoid back feeding
     if (ratio < upper_ratio && ratio >= lower_ratio) {
       // Linear equation joining the maximum selling price to the minimum selling price
-      uint a = (maximum_local_selling_price - minimum_local_selling_price) / (upper_ratio - lower_ratio);
-      uint b = minimum_local_selling_price - a * lower_ratio;
+      int a = (maximum_local_selling_price - minimum_local_selling_price) / (upper_ratio - lower_ratio);
+      int b = minimum_local_selling_price - a * lower_ratio;
       selling_price = a * ratio + b;
 
       // Buying price depends on the portion of local energy and its price
@@ -156,13 +156,13 @@ contract Market {
       // Bill participant differently if they are prosumers or consumers
       if (energy_balance[participants[i]] > 0) {
         // Participant consumed power (energy_balance is positive)
-        int positive_bill = int(buying_price) * energy_balance[participants[i]];
+        int positive_bill = buying_price * energy_balance[participants[i]];
         bill[participants[i]] += positive_bill;
         bill_sent_event(participants[i], positive_bill);
 
       } else {
         // Participant produced energy (energy_balance is negative)
-        int negative_bill = int(selling_price) * energy_balance[participants[i]];
+        int negative_bill = selling_price * energy_balance[participants[i]];
         bill[participants[i]] += negative_bill;
         bill_sent_event(participants[i], negative_bill);
       }
