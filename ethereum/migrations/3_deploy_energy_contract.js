@@ -1,5 +1,5 @@
-var EnergyLib = artifacts.require("./Energy.sol");
+var MarketLib = artifacts.require("./Market.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(EnergyLib);
+  deployer.deploy(MarketLib);
 };

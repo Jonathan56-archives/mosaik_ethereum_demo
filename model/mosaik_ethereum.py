@@ -43,6 +43,11 @@ class Ethereum(mosaik_api.Simulator):
         start_idx = len(self.eids)
         entities = []
         for i in range(num):
+            # Transact to the blockchain to add a participant
+            trans_hash = self.contract.transact(
+                {'to': self.contract_addr, 'gas': 90000}).add_participant()
+
+            # Normal Mosaik protocol
             eid = '%s_%s' % (model, i + start_idx)
             entities.append({
                 'eid': eid,
