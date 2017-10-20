@@ -20,8 +20,9 @@ contract Market {
   // Number of participation during a round
   int number_of_participation = 0;
 
-  // Retail price [$/Wh]
-  int retail_price = 100;
+  // Retail prices for buying and selling [$/Wh]
+  int retail_sell_price = 100;
+  int retail_buy_price = 70;
 
   // Retail price upper limit [%]
   int upper_ratio = 166;
@@ -35,12 +36,11 @@ contract Market {
   // Selling price [$/Wh]
   int selling_price = 0;
 
-  // Maximum / minimum local selling price
-  int maximum_local_selling_price = (3 * retail_price) / 2;
-  int minimum_local_selling_price = retail_price / 2;
+  // Minimum local selling price (above retail price)
+  int minimum_local_selling_price = retail_sell_price * 6 / 5;
 
-  // Minimum local buying price
-  int minimum_local_buying_price = retail_price / 2;
+  // Maximum local buying price (above retail price)
+  int maximum_local_buying_price = retail_buy_price * 6 / 5;
 
   // Bill per participant [$]
   mapping (address => int) bill;
@@ -49,7 +49,6 @@ contract Market {
       Event
   *********** */
 
-  // NOT IMPLEMENTED YET
   event energy_posted_event(address _target, int _value);
   event market_cleared_event(int _sell, int _buy, int ratio, int _prod, int _gen);
   event bill_sent_event(address _target, int _value);
@@ -108,34 +107,37 @@ contract Market {
 
     // The network need more local production
     if (ratio >= upper_ratio) {
-      // Local energy is at its maximum price
-      selling_price = maximum_local_selling_price;
+      // Local energy is cheap but still producer earn more than retail price
+      selling_price = minimum_local_selling_price;
 
       // Buying price depends on the portion of local energy
       // Local energy price * ratio + retail price for the remaining energy
-      buying_price = selling_price * 100 / ratio + retail_price - retail_price * 100 / ratio;
+      buying_price = selling_price * 100 / ratio + retail_sell_price - retail_sell_price * 100 / ratio;
     }
 
     // The network is slowly approaching 100% local production
-    // The price of buying local generation goes down to avoid back feeding
+    // The price of buying local generation goes up
+    // this encourage consumption to increase in order to avoid high prices
     if (ratio < upper_ratio && ratio >= lower_ratio) {
-      // Linear equation joining the maximum selling price to the minimum selling price
-      int a = (maximum_local_selling_price - minimum_local_selling_price) / (upper_ratio - lower_ratio);
-      int b = minimum_local_selling_price - a * lower_ratio;
+      // Linear equation joining the minimum selling price to the maximum buying price
+      int a = (minimum_local_selling_price - maximum_local_buying_price) / (upper_ratio - lower_ratio);
+      int b = maximum_local_buying_price - a * lower_ratio;
       selling_price = a * ratio + b;
 
       // Buying price depends on the portion of local energy and its price
       // Same equatio as previous section
-      buying_price = selling_price * 100 / ratio + retail_price - retail_price * 100 / ratio;
+      buying_price = selling_price * 100 / ratio + retail_sell_price - retail_sell_price * 100 / ratio;
     }
 
     // Local generatio is back feeding to the main grid
     if (ratio < lower_ratio) {
-      // Buying and selling happen at the minimum price
-      // Since retail price for generation is higher than minimum selling price
-      // the market generate value for itself
-      selling_price = minimum_local_selling_price;
-      buying_price = minimum_local_buying_price;
+      // Buying price is at its maximum to encourage more consumption
+      // to lower the price
+      buying_price = maximum_local_buying_price;
+
+      // Selling price progressively decrease as the excess power is sold
+      // at a lower retail price
+      selling_price = buying_price * ratio / 100 + retail_buy_price - retail_buy_price * ratio / 100;
     }
 
     // Event marked cleared
