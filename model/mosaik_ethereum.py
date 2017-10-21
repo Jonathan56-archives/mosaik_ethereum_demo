@@ -1,6 +1,7 @@
 import mosaik_api
 from web3 import Web3, HTTPProvider
 import json
+import time as time_module
 
 __version__ = '0.0.0'
 meta = {
@@ -44,8 +45,8 @@ class Ethereum(mosaik_api.Simulator):
         entities = []
         for i in range(num):
             # Transact to the blockchain to add a participant
-            trans_hash = self.contract.transact(
-                {'to': self.contract_addr, 'gas': 90000}).add_participant()
+            temp = {'from': self.accounts[i], 'to': self.contract_addr, 'gas': 900000}
+            self.contract.transact(temp).add_participant()
 
             # Normal Mosaik protocol
             eid = '%s_%s' % (model, i + start_idx)
@@ -58,34 +59,39 @@ class Ethereum(mosaik_api.Simulator):
         return entities
 
     def step(self, time, inputs=None):
-        # # Calculate energy = power_for_timestep * 1 timestep / 1 hour [Wh] (15/60)
-        # for eid, attrs in inputs.items():
-        #     for attr, nodes in attrs.items():
-        #         for node, value in nodes.items():
-        #             set_value = value
-        # import pdb; pdb.set_trace()
-
+        import pdb; pdb.set_trace()
 
         # For all the participants on the blockchain
         for eid, attrs in inputs.items():
             # Pick account
             account = self.accounts[int(eid.split('_')[1])]
+            netload = 0
 
             # For all the attributes to post to the blockchain
             for attr, attr_data in attrs.items():
 
                 # For all the sources of those attributes
                 for source, value in attr_data.items():
-                    if attr == 'load':
-                        trans_hash = self.contract.transact(
-                            {'to': self.contract_addr, 'gas': 90000}).addConsumptionToken(
-                            account, int(abs(value)))
-                    elif attr == 'gene':
-                        trans_hash = self.contract.transact(
-                            {'to': self.contract_addr, 'gas': 90000}).addGenerationToken(
-                            account, int(abs(value)))
-                    else:
-                        raise ValueError('Invalid attr: ' + str(attr))
+                    # Update the net load with all sources
+                    netload += value
+
+            # Post net load per account to the market
+            temp = {'from': account, 'to': self.contract_addr, 'gas': 1000000}
+            self.contract.transact(temp).post_energy_balance(int(netload))
+
+        # Sleep
+        time_module.sleep(5)
+
+        # Attempt to clear the market once all the participant posted their netload
+        temp = {'to': self.contract_addr, 'gas': 4000000}
+        self.contract.transact(temp).clear_market()
+
+        # Sleep
+        time_module.sleep(1)
+
+        # # Bill all participants
+        # temp = {'to': contract_address, 'gas': 1000000}
+        # self.contract.transact(temp).bill_all_participants()
 
         return time + self.step_size
 
@@ -100,7 +106,7 @@ class Ethereum(mosaik_api.Simulator):
         web3 = Web3(HTTPProvider('http://localhost:8545'))
 
         # Get contract signature
-        with open('ethereum/build/contracts/Energy.json') as energy_file:
+        with open('ethereum/build/contracts/Market.json') as energy_file:
             energy_json = json.load(energy_file)
         energy_abi = energy_json['abi']
         network_id = list(energy_json['networks'].keys())[-1]
