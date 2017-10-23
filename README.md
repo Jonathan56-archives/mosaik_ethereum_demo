@@ -9,7 +9,7 @@ Goals:
 
 Dependencies: testrpc, truffle
 - $ testrpc
-- $ truffle compile --compile-all & truffle migrate --reset
+- $ rm build/contracts/Market.json & truffle compile & truffle migrate --reset
 - $ jupyter notebook
 
 Note: after deploying your contract on multiple testrpc networks you might want

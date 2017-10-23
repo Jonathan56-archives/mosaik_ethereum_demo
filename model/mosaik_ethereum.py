@@ -1,7 +1,7 @@
 import mosaik_api
 from web3 import Web3, HTTPProvider
 import json
-import time as time_module
+from time import sleep
 
 __version__ = '0.0.0'
 meta = {
@@ -23,6 +23,7 @@ class Ethereum(mosaik_api.Simulator):
         self.sid = None
 
         # blockchain parameters
+        self.web3 = None
         self.accounts = None
         self.contract = None
         self.contract_addr = None
@@ -46,7 +47,8 @@ class Ethereum(mosaik_api.Simulator):
         for i in range(num):
             # Transact to the blockchain to add a participant
             temp = {'from': self.accounts[i], 'to': self.contract_addr, 'gas': 900000}
-            self.contract.transact(temp).add_participant()
+            trans_hash = self.contract.transact(temp).add_participant()
+            self._wait_until_trans_receipt(trans_hash)
 
             # Normal Mosaik protocol
             eid = '%s_%s' % (model, i + start_idx)
@@ -59,8 +61,6 @@ class Ethereum(mosaik_api.Simulator):
         return entities
 
     def step(self, time, inputs=None):
-        import pdb; pdb.set_trace()
-
         # For all the participants on the blockchain
         for eid, attrs in inputs.items():
             # Pick account
@@ -77,17 +77,13 @@ class Ethereum(mosaik_api.Simulator):
 
             # Post net load per account to the market
             temp = {'from': account, 'to': self.contract_addr, 'gas': 1000000}
-            self.contract.transact(temp).post_energy_balance(int(netload))
-
-        # Sleep
-        time_module.sleep(5)
+            trans_hash = self.contract.transact(temp).post_energy_balance(int(netload))
+            self._wait_until_trans_receipt(trans_hash)
 
         # Attempt to clear the market once all the participant posted their netload
-        temp = {'to': self.contract_addr, 'gas': 4000000}
-        self.contract.transact(temp).clear_market()
-
-        # Sleep
-        time_module.sleep(1)
+        temp = {'from': self.accounts[0], 'to': self.contract_addr, 'gas': 900000}
+        trans_hash = self.contract.transact(temp).clear_market()
+        self._wait_until_trans_receipt(trans_hash)
 
         # # Bill all participants
         # temp = {'to': contract_address, 'gas': 1000000}
@@ -103,7 +99,7 @@ class Ethereum(mosaik_api.Simulator):
 
     def _init_network_connection(self):
         # Connect to the network
-        web3 = Web3(HTTPProvider('http://localhost:8545'))
+        self.web3 = Web3(HTTPProvider('http://localhost:8545'))
 
         # Get contract signature
         with open('ethereum/build/contracts/Market.json') as energy_file:
@@ -113,12 +109,18 @@ class Ethereum(mosaik_api.Simulator):
         self.contract_addr = energy_json['networks'][network_id]['address']
 
         # List accounts and set default account
-        self.accounts = web3.eth.accounts
-        web3.eth.defaultAccount = self.accounts[0]
+        self.accounts = self.web3.eth.accounts
+        self.web3.eth.defaultAccount = self.accounts[0]
 
         # Create reference to the contract
-        self.contract = web3.eth.contract(energy_abi, self.contract_addr)
+        self.contract = self.web3.eth.contract(energy_abi, self.contract_addr)
 
+    def _wait_until_trans_receipt(self, trans_hash):
+        status = None
+        sleep(0.2)
+        while status is None:
+            status = self.web3.eth.getTransactionReceipt(trans_hash)
+            sleep(0.1)
 
 def main():
     return mosaik_api.start_simulation(Ethereum(), 'mosaik-ethereum simulator')
