@@ -33,12 +33,14 @@ PV_DATA = 'data/pv_10kw.csv'
 PROFILE_FILE = 'data/profiles.data.gz'
 GRID_NAME = 'demo_lv_grid'
 GRID_FILE = 'data/%s.json' % GRID_NAME
+BLOCKCHAIN = False
 
 
 def main():
     random.seed(23)
     world = mosaik.World(sim_config)
     create_scenario(world)
+    import pdb; pdb.set_trace()
     world.run(until=END)  # As fast as possilbe
     # world.run(until=END, rt_factor=1/(60 * 15))  # Real-time 15min -> 1sec
 
@@ -48,7 +50,8 @@ def create_scenario(world):
     pypower = world.start('PyPower', step_size=15*60)
     hhsim = world.start('HouseholdSim')
     pvsim = world.start('CSV', sim_start=START, datafile=PV_DATA)
-    ethereum_sim = world.start('Ethereum', step_size=15*60)
+    if BLOCKCHAIN:
+        ethereum_sim = world.start('Ethereum', step_size=15*60)
 
     # Instantiate models
     grid = pypower.Grid(gridfile=GRID_FILE).children
@@ -56,7 +59,10 @@ def create_scenario(world):
                                     profile_file=PROFILE_FILE,
                                     grid_name=GRID_NAME).children
     pvs = pvsim.PV.create(20)
-    ethereum = ethereum_sim.Ethereum.create(10)
+    if BLOCKCHAIN:
+        ethereum = ethereum_sim.Ethereum.create(10)
+    else:
+        ethereum = None
 
     # Connect entities
     connect_buildings_to_grid(world, houses, pvs, ethereum, grid)
@@ -146,9 +152,10 @@ def connect_buildings_to_grid(world, houses, pvs, ethereum, grid):
         world.connect(house, buses[node_id], ('P_out', 'P'))
 
         # Connect Ethereum database to a node with PV and house load
-        if index < len(ethereum) and index < len(pvs):
-            world.connect(house, ethereum[index], ('P_out', 'load'))
-            world.connect(pvs[index], ethereum[index], ('P', 'gene'))
+        if BLOCKCHAIN:
+            if index < len(ethereum) and index < len(pvs):
+                world.connect(house, ethereum[index], ('P_out', 'load'))
+                world.connect(pvs[index], ethereum[index], ('P', 'gene'))
 
 
 if __name__ == '__main__':
