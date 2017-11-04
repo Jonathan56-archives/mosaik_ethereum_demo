@@ -31,7 +31,7 @@ contract Market {
   int upper_ratio = 166;
 
   // Retail price lower limit [%]
-  int lower_ratio = 50;
+  int lower_ratio = 100;
 
   // Buying price [$/Wh]
   int buying_price = 0;
@@ -40,7 +40,8 @@ contract Market {
   int selling_price = 0;
 
   // Minimum local selling price (above retail price)
-  int minimum_local_selling_price = retail_buy_price * 6 / 5;
+  /*int minimum_local_selling_price = retail_buy_price * 6 / 5;*/
+  int minimum_local_selling_price = 75;
 
   // Maximum local buying price (above retail price)
   int maximum_local_buying_price = retail_sell_price * 6 / 5;
@@ -110,7 +111,7 @@ contract Market {
     // Calculate the ratio between production and consumption
     if (total_production == 0) {
       // There is no local energy but cannot be 0 so we make it 100 lower than loads
-      ratio = 1000;
+      ratio = 100000;
 
     } else {
       // Ratio is calulated normally with a factor 100 to avoid floats
@@ -132,9 +133,9 @@ contract Market {
     // this encourage consumption to increase in order to avoid high prices
     if (ratio < upper_ratio && ratio > lower_ratio) {
       // Linear equation joining the minimum selling price to the maximum buying price
-      int a = (minimum_local_selling_price - maximum_local_buying_price) / (upper_ratio - lower_ratio);
-      int b = maximum_local_buying_price - a * lower_ratio;
-      selling_price = a * ratio + b;
+      int a = (minimum_local_selling_price - maximum_local_buying_price) * 100 / (upper_ratio - lower_ratio);
+      int b = maximum_local_buying_price * 100 - a * lower_ratio;
+      selling_price = (a * ratio + b) / 100;
 
       // Buying price depends on the portion of local energy and its price
       // Same equatio as previous section

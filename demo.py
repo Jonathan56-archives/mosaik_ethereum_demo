@@ -27,9 +27,11 @@ sim_config = {
     },
 }
 
+# START = '2014-06-17 00:00:00'
 START = '2014-01-01 00:00:00'
 END = 1 * 24 * 3600  # 1 day -- originaly 31
-PV_DATA = 'data/pv_10kw.csv'
+PV_DATA = 'data/pv_2kw_rolling15.csv'
+# PROFILE_FILE = 'data/profiles_truncated.data'
 PROFILE_FILE = 'data/profiles.data.gz'
 GRID_NAME = 'demo_lv_grid'
 GRID_FILE = 'data/%s.json' % GRID_NAME
@@ -58,7 +60,7 @@ def create_scenario(world):
     houses = hhsim.ResidentialLoads(sim_start=START,
                                     profile_file=PROFILE_FILE,
                                     grid_name=GRID_NAME).children
-    pvs = pvsim.PV.create(20)
+    pvs = pvsim.PV.create(15)
     if BLOCKCHAIN:
         ethereum = ethereum_sim.Ethereum.create(10)
     else:
@@ -153,10 +155,11 @@ def connect_buildings_to_grid(world, houses, pvs, ethereum, grid):
 
         # Connect Ethereum database to a node with PV and house load
         if BLOCKCHAIN:
-            if index < len(ethereum) and index < len(pvs):
-                world.connect(house, ethereum[index], ('P_out', 'load'))
-                world.connect(pvs[index], ethereum[index], ('P', 'gene'))
-
+            if (index in range(10, 20)) and index < len(pvs):
+                world.connect(house, ethereum[index - 10], ('P_out', 'load'))
+                world.connect(pvs[index], ethereum[index - 10], ('P', 'gene'))
+            elif (index in range(10, 20)):
+                world.connect(house, ethereum[index - 10], ('P_out', 'load'))
 
 if __name__ == '__main__':
     main()
